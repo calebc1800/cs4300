@@ -1,0 +1,7 @@
+[tool.pytest.ini_options]
+# Add src folder to sys.path so imports work:
+pythonpath = ["src"]
+# Only look for tests in tests/:
+testpaths = ["tests"]
+# Short test summary info, quiet mode:
+addopts = "-ra -q -v"
