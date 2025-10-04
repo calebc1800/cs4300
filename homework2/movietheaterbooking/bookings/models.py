@@ -1,17 +1,37 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 class Movies(models.Model):
-    title = models.CharField(max_length=100)
-    description = models.CharField(max_length=1000)
-    realse_date = models.DateField()
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    release_date = models.DateField()
     duration = models.DurationField()
+    
+    def __str__(self):
+        return self.title
+    
+    class Meta:
+        ordering = ['release_date']
 
 class Seat(models.Model):
-    seat_number = models.IntegerField()
+    seat_number = models.CharField(max_length=10, unique=True)
     booking_status = models.BooleanField(default=False)
+    
+    def __str__(self):
+        return f"Seat {self.seat_number} - {self.booking_status}"
+    
+    class Meta:
+        ordering = ['seat_number']
 
 class Booking(models.Model):
     movie = models.ForeignKey(Movies, on_delete=models.CASCADE)
     seat = models.ForeignKey(Seat, on_delete=models.CASCADE)
-    user = "test user"
-    booking_date = models.DateField()
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    booking_date = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.movie.title} - {self.seat.seat_number}"
+    
+    class Meta:
+        ordering = ['-booking_date']
+        unique_together = ['movie', 'seat']
