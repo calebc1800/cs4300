@@ -1,0 +1,51 @@
+{% extends 'bookings/base.html' %}
+
+{% block title %}Booking History{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4">Your Booking History</h2>
+    </div>
+</div>
+
+{% if bookings %}
+<div class="row">
+    {% for booking in bookings %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">{{ booking.movie.title }}</h5>
+                <p class="card-text">
+                    <strong>Seat:</strong> {{ booking.seat.seat_number }}<br>
+                    <strong>Booking Date:</strong> {{ booking.booking_date|date:"M d, Y g:i A" }}<br>
+                    <strong>Movie Duration:</strong> {{ booking.movie.duration }} minutes
+                </p>
+                <p class="card-text">
+                    <small class="text-muted">{{ booking.movie.description|truncatewords:15 }}</small>
+                </p>
+            </div>
+            <div class="card-footer bg-transparent">
+                <small class="text-muted">
+                    Movie Release: {{ booking.movie.release_date|date:"M d, Y" }}
+                </small>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="row">
+    <div class="col-12">
+        <div class="alert alert-info" role="alert">
+            <h4>No bookings yet!</h4>
+            <p class="mb-0">
+                You haven't made any bookings yet. 
+                <a href="{% url 'movie_list' %}" class="alert-link">Browse movies</a> 
+                to make your first booking.
+            </p>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

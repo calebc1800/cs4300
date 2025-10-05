@@ -1,0 +1,152 @@
+{% extends 'bookings/base.html' %}
+
+{% block title %}Book Seat - {{ movie.title }}{% endblock %}
+
+{% block content %}
+<!-- Expose user ID to JavaScript for booking POST -->
+<script>
+  const USER_ID = {{ request.user.id|default:'testuser' }};
+</script>
+
+<div class="row">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'movie_list' %}">Movies</a></li>
+                <li class="breadcrumb-item active">Book Seat</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-body">
+                <h3 class="card-title">{{ movie.title }}</h3>
+                <p class="card-text">{{ movie.description }}</p>
+                <p class="text-muted">
+                    <strong>Release Date:</strong> {{ movie.release_date|date:"M d, Y" }}<br>
+                    <strong>Duration:</strong> {{ movie.duration }} minutes
+                </p>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                <h4>Select Your Seat</h4>
+            </div>
+            <div class="card-body">
+                {% if all_seats %}
+                <div class="row">
+                    {% for seat in all_seats %}
+                    <div class="col-md-3 col-sm-4 col-6 mb-3">
+                        {% if seat.booking_status == False %}
+                        <button class="btn btn-outline-success w-100 seat-btn"
+                                data-seat-id="{{ seat.id }}"
+                                data-seat-number="{{ seat.seat_number }}">
+                            Seat {{ seat.seat_number }}
+                        </button>
+                        {% else %}
+                        <button class="btn btn-danger w-100"
+                                disabled
+                                title="This seat is already booked">
+                            Seat {{ seat.seat_number }}
+                        </button>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="alert alert-warning" role="alert">
+                    No seats data available for this movie.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h4>Booking Summary</h4>
+            </div>
+            <div class="card-body">
+                <p><strong>Movie:</strong> {{ movie.title }}</p>
+                <p><strong>Selected Seat:</strong> <span id="selected-seat">None</span></p>
+                <button id="book-btn" class="btn btn-custom w-100" disabled>
+                    Complete Booking
+                </button>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-body text-center">
+                <h6>Seat Legend</h6>
+                <button class="btn btn-outline-success btn-sm me-2" disabled>Available</button>
+                <button class="btn btn-danger btn-sm" disabled>Booked</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const seatBtns = document.querySelectorAll('.seat-btn');
+    const selectedSeatSpan = document.getElementById('selected-seat');
+    const bookBtn = document.getElementById('book-btn');
+    let selectedSeatId = null;
+
+    seatBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            seatBtns.forEach(b => b.classList.remove('btn-success', 'btn-outline-success'));
+            seatBtns.forEach(b => b.classList.add('btn-outline-success'));
+            this.classList.remove('btn-outline-success');
+            this.classList.add('btn-success');
+            selectedSeatId = this.dataset.seatId;
+            selectedSeatSpan.textContent = this.dataset.seatNumber;
+            bookBtn.disabled = false;
+        });
+    });
+
+    bookBtn.addEventListener('click', function() {
+        if (selectedSeatId) {
+            const movieId = "{{ movie.id }}";
+            const seatId = selectedSeatId;
+            const userId = USER_ID;
+
+            if (userId === null) {
+                alert("You must be logged in to book a seat.");
+                return;
+            }
+
+            const csrftokenElem = document.querySelector('[name=csrfmiddlewaretoken]');
+            const csrftoken = csrftokenElem ? csrftokenElem.value : '';
+
+            fetch("/api/bookings/", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    movie: movieId,
+                    seat: seatId,
+                    user: userId
+                }),
+            })
+            .then(response => {
+                if (response.ok) return response.json();
+                return response.json().then(e => { throw e; });
+            })
+            .then(data => {
+                alert(`Booking confirmed!\nMovie: {{ movie.title }}\nSeat: ${selectedSeatSpan.textContent}`);
+                window.location.href = "{% url 'booking_history' %}";
+            })
+            .catch(error => {
+                alert("Booking failed: " + (error.detail || JSON.stringify(error)));
+            });
+        }
+    });
+});
+</script>
+{% endblock %}

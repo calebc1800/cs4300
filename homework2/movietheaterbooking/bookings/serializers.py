@@ -40,6 +40,13 @@ class BookingSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("This seat is already booked")
         return data
 
+    def create(self, validated_data):
+        # Mark seat as booked when creating booking
+        booking = super().create(validated_data)
+        booking.seat.booking_status = True
+        booking.seat.save()
+        return booking
+
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
