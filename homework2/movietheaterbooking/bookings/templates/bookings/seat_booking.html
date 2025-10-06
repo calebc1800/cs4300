@@ -2,12 +2,9 @@
 
 {% block title %}Book Seat - {{ movie.title }}{% endblock %}
 
-{% block content %}
-<!-- Expose user ID to JavaScript for booking POST -->
-<script>
-  const USER_ID = {{ request.user.id|default:'testuser' }};
-</script>
+{% csrf_token %}
 
+{% block content %}
 <div class="row">
     <div class="col-12">
         <nav aria-label="breadcrumb">
@@ -113,20 +110,23 @@ document.addEventListener('DOMContentLoaded', function() {
         if (selectedSeatId) {
             const movieId = "{{ movie.id }}";
             const seatId = selectedSeatId;
-            const userId = USER_ID;
+            alert('point 1');
+            // const userId = "{{ request.user.id }}"; // Fixed: Added quotes and Django context
+            const userId = 2;
+            const csrfToken = "{{ csrf_token }}"; // Fixed: Use Django CSRF token
+            
+            alert(`Movie: ${movieId}, Seat: ${seatId}, User: ${userId}`);
 
             if (userId === null) {
                 alert("You must be logged in to book a seat.");
                 return;
             }
 
-            const csrftokenElem = document.querySelector('[name=csrfmiddlewaretoken]');
-            const csrftoken = csrftokenElem ? csrftokenElem.value : '';
-
             fetch("/api/bookings/", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
+                    'X-CSRFToken': csrfToken
                 },
                 body: JSON.stringify({
                     movie: movieId,
@@ -135,6 +135,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }),
             })
             .then(response => {
+                alert(response)
                 if (response.ok) return response.json();
                 return response.json().then(e => { throw e; });
             })
@@ -145,6 +146,8 @@ document.addEventListener('DOMContentLoaded', function() {
             .catch(error => {
                 alert("Booking failed: " + (error.detail || JSON.stringify(error)));
             });
+        } else {
+            alert('No seat selected');
         }
     });
 });

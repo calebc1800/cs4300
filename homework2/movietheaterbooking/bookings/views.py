@@ -115,14 +115,16 @@ def seat_booking(request, movie_id):
     Display seat booking page for a specific movie
     """
     movie = get_object_or_404(Movie, id=movie_id)
-    available_seats = Seat.objects.filter(booking_status=False)
-    unavailable_seats = Seat.objects.filter(booking_status=True)
+    # available_seats = Seat.objects.filter(booking_status=False)
+    # unavailable_seats = Seat.objects.filter(booking_status=True)
     all_seats = Seat.objects.all()
+    all_users = Booking.objects.all()
     return render(request, 'bookings/seat_booking.html', {
         'movie': movie,
-        'available_seats': available_seats,
-        'unavailable_seats': unavailable_seats,
-        'all_seats': all_seats
+        # 'available_seats': available_seats,
+        # 'unavailable_seats': unavailable_seats,
+        'all_seats': all_seats,
+        'all_users': all_users
     })
 
 def booking_history(request):
