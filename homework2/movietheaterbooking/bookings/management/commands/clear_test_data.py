@@ -9,5 +9,6 @@ class Command(BaseCommand):
         Movie.objects.all().delete()
         Seat.objects.all().delete()
         User = get_user_model()
-        User.objects.filter(username="testuser").delete()
+        User.objects.filter(username="testuser01").delete()
+        User.objects.filter(username="testuser02").delete()
         self.stdout.write(self.style.SUCCESS("Test data cleared."))

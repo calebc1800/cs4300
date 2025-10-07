@@ -50,11 +50,24 @@ class Command(BaseCommand):
 
         # Create test user
         User = get_user_model()
-        username = "testuser"
+        username = "testuser01"
         if not User.objects.filter(username=username).exists():
             User.objects.create_user(
                 username=username,
-                email="testuser@example.com",
+                email="testuser01@example.com",
+                password="password123"
+            )
+            self.stdout.write(self.style.SUCCESS(f"Created test user: {username}"))
+        else:
+            self.stdout.write(self.style.WARNING(f"Test user already exists: {username}"))
+            
+        # Create test user 2
+        User = get_user_model()
+        username = "testuser02"
+        if not User.objects.filter(username=username).exists():
+            User.objects.create_user(
+                username=username,
+                email="testuser02@example.com",
                 password="password123"
             )
             self.stdout.write(self.style.SUCCESS(f"Created test user: {username}"))

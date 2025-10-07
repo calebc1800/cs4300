@@ -28,7 +28,7 @@
                 </p>
             </div>
         </div>
-        
+
         <div class="card mt-4">
             <div class="card-header">
                 <h4>Select Your Seat</h4>
@@ -62,7 +62,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="col-lg-4">
         <div class="card">
             <div class="card-header">
@@ -70,13 +70,29 @@
             </div>
             <div class="card-body">
                 <p><strong>Movie:</strong> {{ movie.title }}</p>
+
+                <!-- User Selection Dropdown -->
+                <div class="mb-3">
+                    <label for="user-select" class="form-label"><strong>Book for User:</strong></label>
+                    <select id="user-select" class="form-select" name="selected_user">
+                        <option value="" disabled selected>Select a user</option>
+                        {% for user in all_users %}
+                            <option value="{{ user.id }}" 
+                                    {% if user.id == request.user.id %}selected{% endif %}>
+                                {% if user.username %}({{ user.username }}){% endif %}
+                                {% if user.id == request.user.id %} - You{% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
                 <p><strong>Selected Seat:</strong> <span id="selected-seat">None</span></p>
                 <button id="book-btn" class="btn btn-custom w-100" disabled>
                     Complete Booking
                 </button>
             </div>
         </div>
-        
+
         <div class="card mt-3">
             <div class="card-body text-center">
                 <h6>Seat Legend</h6>
@@ -92,6 +108,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const seatBtns = document.querySelectorAll('.seat-btn');
     const selectedSeatSpan = document.getElementById('selected-seat');
     const bookBtn = document.getElementById('book-btn');
+    const userSelect = document.getElementById('user-select');
     let selectedSeatId = null;
 
     seatBtns.forEach(btn => {
@@ -102,52 +119,67 @@ document.addEventListener('DOMContentLoaded', function() {
             this.classList.add('btn-success');
             selectedSeatId = this.dataset.seatId;
             selectedSeatSpan.textContent = this.dataset.seatNumber;
-            bookBtn.disabled = false;
+            checkBookingRequirements();
         });
     });
 
+    // Enable/disable booking button based on seat and user selection
+    function checkBookingRequirements() {
+        if (selectedSeatId && userSelect.value) {
+            bookBtn.disabled = false;
+        } else {
+            bookBtn.disabled = true;
+        }
+    }
+
+    // Listen for user selection changes
+    userSelect.addEventListener('change', function() {
+        checkBookingRequirements();
+    });
+
     bookBtn.addEventListener('click', function() {
-        if (selectedSeatId) {
+        if (selectedSeatId && userSelect.value) {
             const movieId = "{{ movie.id }}";
             const seatId = selectedSeatId;
-            alert('point 1');
-            // const userId = "{{ request.user.id }}"; // Fixed: Added quotes and Django context
-            const userId = 2;
-            const csrfToken = "{{ csrf_token }}"; // Fixed: Use Django CSRF token
-            
-            alert(`Movie: ${movieId}, Seat: ${seatId}, User: ${userId}`);
+            const userId = userSelect.value;
+            const csrfToken = "{{ csrf_token }}";
 
-            if (userId === null) {
-                alert("You must be logged in to book a seat.");
-                return;
+            // Get selected user name for confirmation
+            const selectedUserOption = userSelect.options[userSelect.selectedIndex];
+            const selectedUserName = selectedUserOption.text;
+
+            // Confirm booking
+            if (confirm(`Confirm booking for: ${selectedUserName}\nSeat: ${selectedSeatSpan.textContent}\nMovie: {{ movie.title }}`)) {
+                fetch("/api/bookings/", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({
+                        movie: movieId,
+                        seat: seatId,
+                        user: userId
+                    }),
+                })
+                .then(response => {
+                    if (response.ok) return response.json();
+                    return response.json().then(e => { throw e; });
+                })
+                .then(data => {
+                    alert(`Booking confirmed!\nMovie: {{ movie.title }}\nSeat: ${selectedSeatSpan.textContent}\nUser: ${selectedUserName}`);
+                    window.location.reload();
+                })
+                .catch(error => {
+                    alert("Booking failed: " + (error.detail || JSON.stringify(error)));
+                });
             }
-
-            fetch("/api/bookings/", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    'X-CSRFToken': csrfToken
-                },
-                body: JSON.stringify({
-                    movie: movieId,
-                    seat: seatId,
-                    user: userId
-                }),
-            })
-            .then(response => {
-                alert(response)
-                if (response.ok) return response.json();
-                return response.json().then(e => { throw e; });
-            })
-            .then(data => {
-                alert(`Booking confirmed!\nMovie: {{ movie.title }}\nSeat: ${selectedSeatSpan.textContent}`);
-                window.location.href = "{% url 'booking_history' %}";
-            })
-            .catch(error => {
-                alert("Booking failed: " + (error.detail || JSON.stringify(error)));
-            });
         } else {
-            alert('No seat selected');
+            if (!selectedSeatId) {
+                alert('Please select a seat');
+            } else if (!userSelect.value) {
+                alert('Please select a user to book for');
+            }
         }
     });
 });

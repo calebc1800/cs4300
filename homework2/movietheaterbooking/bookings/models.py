@@ -14,6 +14,7 @@ class Movie(models.Model):
         ordering = ['release_date']
 
 class Seat(models.Model):
+    movie = models.ForeignKey(Movie, on_delete=models.CASCADE)
     seat_number = models.CharField(max_length=10, unique=True)
     booking_status = models.BooleanField(default=False)
     

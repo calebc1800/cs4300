@@ -118,7 +118,7 @@ def seat_booking(request, movie_id):
     # available_seats = Seat.objects.filter(booking_status=False)
     # unavailable_seats = Seat.objects.filter(booking_status=True)
     all_seats = Seat.objects.all()
-    all_users = Booking.objects.all()
+    all_users = User.objects.filter(is_active=True)
     return render(request, 'bookings/seat_booking.html', {
         'movie': movie,
         # 'available_seats': available_seats,
@@ -129,10 +129,78 @@ def seat_booking(request, movie_id):
 
 def booking_history(request):
     """
-    Display user's booking history
+    Display individual user's booking history - NO authentication required
+    Simplified version without stats or "all users" view
     """
-    if request.user.is_authenticated:
-        bookings = Booking.objects.filter(user=request.user)
+    # Get selected user from query parameters
+    selected_user_id = request.GET.get('user_id')
+
+    # Get ALL users for the dropdown
+    all_users = User.objects.filter(is_active=True)
+
+    # Get bookings only for selected user (no default "all bookings" view)
+    if selected_user_id:
+        try:
+            selected_user = User.objects.get(id=selected_user_id, is_active=True)
+            bookings = Booking.objects.filter(user=selected_user).order_by('-booking_date')
+        except (User.DoesNotExist, ValueError):
+            bookings = Booking.objects.none()
     else:
-        bookings = []
-    return render(request, 'bookings/booking_history.html', {'bookings': bookings})
+        # No user selected - show empty bookings
+        bookings = Booking.objects.none()
+
+    # Optimize database queries
+    bookings = bookings.select_related('movie', 'seat', 'user')
+
+    # Simple context data
+    context = {
+        'bookings': bookings,
+        'all_users': all_users,
+        'selected_user_id': int(selected_user_id) if selected_user_id else None,
+    }
+
+    return render(request, 'bookings/booking_history.html', context)
+
+from django.views.decorators.http import require_http_methods
+
+# Simple API endpoint
+@require_http_methods(["GET"])
+def get_user_bookings_api(request, user_id):
+    """
+    API endpoint to get bookings for a specific user - NO authentication required
+    Simplified version without stats calculation
+    """
+    try:
+        user = User.objects.get(id=user_id, is_active=True)
+    except User.DoesNotExist:
+        return JsonResponse({'error': 'User not found'}, status=404)
+
+    # Get bookings for this user
+    bookings = Booking.objects.filter(user=user).select_related(
+        'movie', 'seat', 'user'
+    )
+
+    # Serialize bookings data
+    bookings_data = []
+    for booking in bookings:
+        bookings_data.append({
+            'id': booking.id,
+            'movie_id': booking.movie.id,
+            'movie_title': booking.movie.title,
+            'movie_description': booking.movie.description,
+            'movie_duration': booking.movie.duration,
+            'movie_release_date': booking.movie.release_date.isoformat() if booking.movie.release_date else None,
+            'seat_number': booking.seat.seat_number,
+            'booking_date': booking.booking_date.isoformat(),
+            'user_id': booking.user.id,
+            'username': booking.user.username,
+        })
+
+    # Simple response
+    return JsonResponse({
+        'bookings': bookings_data,
+        'user': {
+            'id': user.id,
+            'username': user.username,
+        }
+    })
