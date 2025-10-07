@@ -16,5 +16,4 @@ urlpatterns = [
     path('', views.movie_list, name='movie_list'),
     path('movie/<int:movie_id>/book/', views.seat_booking, name='book_seat'),
     path('history/', views.booking_history, name='booking_history'),
-    path('api/bookings/user/<int:user_id>/', views.get_user_bookings_api, name='user_bookings_api'),
 ]

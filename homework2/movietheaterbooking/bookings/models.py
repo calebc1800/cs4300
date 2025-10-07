@@ -14,8 +14,8 @@ class Movie(models.Model):
         ordering = ['release_date']
 
 class Seat(models.Model):
-    movie = models.ForeignKey(Movie, on_delete=models.CASCADE)
-    seat_number = models.CharField(max_length=10, unique=True)
+    movie = models.ForeignKey(Movie, on_delete=models.CASCADE, related_name='seats', null=True)
+    seat_number = models.CharField(max_length=10)
     booking_status = models.BooleanField(default=False)
     
     def __str__(self):
@@ -35,4 +35,3 @@ class Booking(models.Model):
     
     class Meta:
         ordering = ['-booking_date']
-        unique_together = ['movie', 'seat']

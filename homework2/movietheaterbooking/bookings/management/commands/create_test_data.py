@@ -37,16 +37,21 @@ class Command(BaseCommand):
         else:
             self.stdout.write(self.style.WARNING(f"Movie already exists: {movie2.title}"))
 
-        # Create seats
+        # Create seats for each movie
         seat_count = 0
-        for row in ("A", "B"):
-            for i in range(1, 21):
-                seat_number = f"{row}{i:02d}"
-                seat, created = Seat.objects.get_or_create(seat_number=seat_number)
-                if created:
-                    seat_count += 1
+        for movie in [movie1, movie2]:
+            for row in ("A", "B"):
+                for i in range(1, 21):
+                    seat_number = f"{row}{i:02d}"
+                    seat, created = Seat.objects.get_or_create(
+                        movie=movie,
+                        seat_number=seat_number
+                    )
+                    if created:
+                        seat_count += 1
 
-        self.stdout.write(self.style.SUCCESS(f"Created {seat_count} new seats."))
+        self.stdout.write(self.style.SUCCESS(f"Created {seat_count} new seats across all movies."))
+
 
         # Create test user
         User = get_user_model()

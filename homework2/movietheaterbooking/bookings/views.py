@@ -87,20 +87,22 @@ class BookingViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(user_id=user_id)
         return queryset
     
-    @action(detail=False, methods=['get'])
-    def my_bookings(self, request):
-        """
-        Get current user's bookings
-        """
-        if not request.user.is_authenticated:
-            return Response(
-                {'error': 'Authentication required'}, 
-                status=status.HTTP_401_UNAUTHORIZED
-            )
-        
-        bookings = Booking.objects.filter(user=request.user)
-        serializer = self.get_serializer(bookings, many=True)
-        return Response(serializer.data)
+@action(detail=False, methods=['get'])
+def my_bookings(self, request):
+    """
+    Get bookings for a specified user via query parameter 'user_id'
+    """
+    user_id = request.query_params.get('user_id')
+    if not user_id:
+        return Response(
+            {'error': 'User ID is required'}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    bookings = Booking.objects.filter(user__id=user_id)
+    serializer = self.get_serializer(bookings, many=True)
+    return Response(serializer.data)
+
 
 # Template Views for Web Interface
 def movie_list(request):
@@ -117,7 +119,7 @@ def seat_booking(request, movie_id):
     movie = get_object_or_404(Movie, id=movie_id)
     # available_seats = Seat.objects.filter(booking_status=False)
     # unavailable_seats = Seat.objects.filter(booking_status=True)
-    all_seats = Seat.objects.all()
+    all_seats = Seat.objects.filter(movie=movie)
     all_users = User.objects.filter(is_active=True)
     return render(request, 'bookings/seat_booking.html', {
         'movie': movie,
@@ -160,47 +162,3 @@ def booking_history(request):
     }
 
     return render(request, 'bookings/booking_history.html', context)
-
-from django.views.decorators.http import require_http_methods
-
-# Simple API endpoint
-@require_http_methods(["GET"])
-def get_user_bookings_api(request, user_id):
-    """
-    API endpoint to get bookings for a specific user - NO authentication required
-    Simplified version without stats calculation
-    """
-    try:
-        user = User.objects.get(id=user_id, is_active=True)
-    except User.DoesNotExist:
-        return JsonResponse({'error': 'User not found'}, status=404)
-
-    # Get bookings for this user
-    bookings = Booking.objects.filter(user=user).select_related(
-        'movie', 'seat', 'user'
-    )
-
-    # Serialize bookings data
-    bookings_data = []
-    for booking in bookings:
-        bookings_data.append({
-            'id': booking.id,
-            'movie_id': booking.movie.id,
-            'movie_title': booking.movie.title,
-            'movie_description': booking.movie.description,
-            'movie_duration': booking.movie.duration,
-            'movie_release_date': booking.movie.release_date.isoformat() if booking.movie.release_date else None,
-            'seat_number': booking.seat.seat_number,
-            'booking_date': booking.booking_date.isoformat(),
-            'user_id': booking.user.id,
-            'username': booking.user.username,
-        })
-
-    # Simple response
-    return JsonResponse({
-        'bookings': bookings_data,
-        'user': {
-            'id': user.id,
-            'username': user.username,
-        }
-    })
